@@ -1,0 +1,46 @@
+# HTTP请求
+requests>=2.31.0
+urllib3>=2.1.0
+
+# 数据处理
+pandas>=2.1.4
+numpy>=1.26.3
+beautifulsoup4>=4.12.2
+
+# 日期处理
+python-dateutil>=2.8.2
+
+# 配置管理
+pyyaml>=6.0.1
+
+# 日志管理
+loguru>=0.7.2
+
+# 数据验证
+pydantic>=2.5.3
+
+# 并发处理
+aiohttp>=3.9.1
+asyncio>=3.4.3
+
+# 数据库
+sqlalchemy>=2.0.25
+
+# 测试
+pytest>=7.4.4
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+
+# 代码质量
+flake8>=7.0.0
+black>=23.12.1
+isort>=5.13.2
+mypy>=1.8.0
+
+# 文档
+sphinx>=7.2.6
+sphinx-rtd-theme>=2.0.0
+
+# 开发工具
+ipython>=8.19.0
+jupyter>=1.0.0 

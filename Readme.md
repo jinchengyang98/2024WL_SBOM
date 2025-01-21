@@ -1,138 +1,158 @@
-# 漏洞数据分析系统
+# 开源软件供应链漏洞分析系统
 
-## 系统实体关系
+一个基于Neo4j图数据库的开源软件供应链漏洞分析系统，专注于漏洞数据的采集、分析和传播路径追踪。
 
-本系统包含以下主要实体及其关系：
+## 系统架构
 
-1. Vulnerability（漏洞）
-   - 属性：cve_id, published_date, description, CPEs, CWE, CVSS2
-   - 关系：
-     - AFFECT -> Software
-     - AFFECT_VERSION -> Version
-     - FIX -> Software
+### 1. 核心模块
+```
+src/
+├── collectors/          # 漏洞数据采集器
+├── models/             # 数据模型定义
+├── services/           # 核心业务服务
+└── utils/             # 通用工具类
+```
 
-2. Software（组件）
-   - 属性：name, author, url
-   - 关系：
-     - HAS -> Version
-     - REUSE -> Version
-     - REUSE -> Software
+### 2. 主要功能
 
-3. Version（版本）
-   - 属性：tag, version, commit_date, repo_name, author
-   - 关系：
-     - REUSE -> Version
+#### 2.1 多源漏洞数据采集
+- **支持数据源**
+  - NVD (National Vulnerability Database)
+  - GitHub Security Advisory
+  - RedHat Security Data
+  - Debian Security Tracker
+- **采集特性**
+  - 统一的采集器接口(BaseVulnerabilityCollector)
+  - 增量式数据更新策略
 
-4. Patch（补丁）
-   - 属性：fix_cve_id, commit_id, repo_owner, repo_name, commit_date
-   - 关系：
-     - FIX_CVE -> Vulnerability
-     - FIX_VERSION -> Version
+#### 2.2 图数据库存储
+- **数据模型**
+  - 节点类型：Vulnerability、Component、Version、Patch
+  - 关系类型：AFFECTS、HAS_VERSION、FIXED_BY、DEPENDS_ON
+- **存储特性**
+  - 高效的图查询能力
+  - 批量数据处理支持
 
-## 已实现功能
+#### 2.3 漏洞分析能力
+- **影响分析**
+  - 直接和间接影响组件识别
+  - 受影响版本统计
+- **路径分析**
+  - 多层级依赖追踪
+  - 传播路径识别
 
-1. 数据收集
-   - 从 NVD 数据源获取漏洞数据
-   - 将获取的数据保存为 JSON 文件，按年份和 CVE ID 组织
 
-2. 数据清洗和存储
-   - 解析 NVD JSON 数据，提取关键信息
-   - 创建 Vulnerability、Component、Version 和 Patch 实体
-   - 将实体数据存储到 Neo4j 图数据库中
-   - 建立实体之间的关系（如 AFFECTS, HAS_VERSION, FIXES 等）
+## 环境要求
 
-3. 基础查询功能
-   - 查找特定 CVE 影响的组件和版本
-   - 查找特定组件的漏洞历史
-   - 识别可能的补丁信息
+- Python 3.8+
+- Neo4j 4.4+
+- Git
 
-## 待实现功能
-
-1. 高级关联分析
-   - 实现软件依赖关系的分析
-   - 分析漏洞在不同项目间的传播路径
-
-2. 可视化
-   - 开发图形界面，展示漏洞、软件、版本之间的关系
-   - 提供交互式查询和分析工具
-
-3. 报告生成
-   - 自动生成漏洞影响报告和风险评估报告
-
-4. 实时更新
-   - 实现数据源的实时监控和更新机制
-
-5. API 接口
-   - 开发 RESTful API，允许其他系统集成和查询数据
-
-## 使用说明
+## 快速开始
 
 ### 1. 环境准备
+```bash
+# 克隆代码库
+git clone [repository-url]
+cd [repository-name]
 
-1. 确保已安装 Python 3.7 或更高版本。
-2. 安装所需的 Python 库:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. 安装并启动 Neo4j 数据库。
+# 创建虚拟环境
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
 
-### 2. 配置
+# 安装依赖
+pip install -r requirements.txt
 
-1. 在 `程序/source/config/` 目录下创建 `config.py` 文件，添加以下内容:
-   ```python
-   ROOT_PATH = "你的项目根目录路径"
-   DATA_PATH = "data"
-   NVD_DATA_PATH = ROOT_PATH + "\\" + DATA_PATH + "\\" + "CVE\\NVD"
-   MAX_FILES_TO_PROCESS = 10  # 可以根据需要调整这个值
-   ```
-2. 在 `程序/source/config/config_nvd_github.json` 文件中配置 NVD API 参数。
-
-### 3. 数据收集
-
-```
-python source/1_vulnerability_data_collector.py
+# 开发环境额外依赖
+pip install -r requirements-dev.txt
 ```
 
-这将从 NVD 数据源获取漏洞数据，并将其保存为 JSON 文件，按年份和 CVE ID 组织。
-
-### 4. 数据清洗和存储
-
-运行数据清洗和存储脚本:
-
+### 2. 配置文件
+1. 数据源配置
+```bash
+cp config/sources.json.example config/sources.json
 ```
-python source/2_vulnerability_data_cleaner.py
+
+编辑 `sources.json`:
+```json
+{
+    "nvd": {
+        "api_key": "your-api-key",
+        "delay_between_requests": 6,
+        "max_retries": 3
+    },
+    "github": {
+        "token": "your-github-token",
+        "delay_between_requests": 1
+    }
+}
 ```
-这将解析收集到的 NVD 数据，提取关键信息，创建实体，并将数据存储到 Neo4j 图数据库中。
 
-### 5. 执行查询
+2. 数据库配置
+```bash
+cp config/database.json.example config/database.json
+```
 
-目前，基础查询功能已经实现，但尚未提供独立的查询脚本。您可以通过 Neo4j 的 Cypher 查询语言直接在 Neo4j 浏览器中执行查询，例如：
+编辑 `database.json`:
+```json
+{
+    "uri": "bolt://localhost:7687",
+    "username": "neo4j",
+    "password": "your-password"
+}
+```
 
-1. 查找特定 CVE 影响的组件和版本:
-   ```cypher
-   MATCH (v:Vulnerability {cve_id: 'CVE-2021-44228'})-[:AFFECTS]->(c:Component)-[:HAS_VERSION]->(ver:Version)
-   RETURN v.cve_id, c.product, ver.version
-   ```
+### 3. 基本使用
 
-2. 查找特定组件的漏洞历史:
-   ```cypher
-   MATCH (c:Component {product: 'log4j'})<-[:AFFECTS]-(v:Vulnerability)
-   RETURN v.cve_id, v.published_date, v.cvss_v3_base_score
-   ORDER BY v.published_date DESC
-   ```
+#### 数据采集
+```bash
+# 采集所有数据源
+python -m src.services.collector
 
-3. 识别可能的补丁信息:
-   ```cypher
-   MATCH (p:Patch)-[:FIXES]->(v:Vulnerability {cve_id: 'CVE-2021-44228'})
-   RETURN p.patch_id, p.patch_url
-   ```
+# 采集指定数据源
+python -m src.services.collector --sources nvd github
 
-### 6. 查看结果
+# 指定时间范围采集
+python -m src.services.collector --start-date 2024-01-01
+```
 
-查询结果将在 Neo4j 浏览器中显示。对于更复杂的查询和可视化，请参考 Neo4j 文档或等待后续的可视化功能实现。
+#### 漏洞分析
+```bash
+# 分析漏洞影响范围
+python -m src.services.analyzer --vuln-id CVE-2024-1234
 
-## 注意事项
+# 分析组件依赖关系
+python -m src.services.analyzer --component-name example-package
+```
 
-- 请确保在运行脚本之前已正确配置所有必要的设置。
-- 数据收集过程可能需要一些时间，具体取决于您设置的数据量和网络条件。
-- 在进行大规模数据处理时，请注意监控系统资源使用情况。
+## 常见问题
+
+### 1. API访问限制
+- **问题**: 请求频繁被拒绝
+- **解决**: 调整配置文件中的`delay_between_requests`参数
+- **建议值**: NVD建议6秒，GitHub建议1秒
+
+### 2. 内存使用优化
+- **问题**: 处理大量数据时内存占用高
+- **解决**: 使用批处理模式
+- **示例**: 添加`--batch-size 1000`参数
+
+### 3. 数据库连接
+- **问题**: 无法连接Neo4j
+- **解决**:
+  1. 检查Neo4j服务是否运行
+  2. 验证连接配置是否正确
+  3. 确认防火墙设置
+
+## 开发状态
+
+### 已实现功能
+- [x] 多源数据采集框架
+- [x] 图数据库存储方案
+- [x] 基础漏洞分析能力
+- [x] 路径分析服务
+
+### 开发中功能
+- [ ] 文本分析与组件关联
+
